@@ -1,0 +1,20 @@
+[package]
+name = "TokioChatServer"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "chat_server"
+path = "src/lib.rs"
+
+[dependencies]
+compact_str = "0.9.0"
+fastrand = "2.3.0"
+dashmap = "6"
+futures = "0.3"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tracing-appender = "0.2"
+tikv-jemallocator = "0.5"
