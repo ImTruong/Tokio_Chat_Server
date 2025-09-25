@@ -1,0 +1,16 @@
+[package]
+name = "TokioChatClient"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3.30"
+tracing = "0.1"
+tracing-appender = "0.2.3"
+anyhow = "1.0.82"
+ratatui = "0.27.0"
+crossterm = { version = "0.27.0", features = ["event-stream"] }
+tui-textarea = "0.5.0"
+textwrap = "0.16"
