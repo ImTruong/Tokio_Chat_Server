@@ -77,3 +77,19 @@ macro_rules! b {
     };
 }
 
+pub fn valid_name(name: Option<&str>) -> bool {
+    match name {
+        None => false,
+        Some(name) => {
+            if name.len() < 2 {
+                return false;
+            }
+            if name.len() > 20 {
+                return false;
+            }
+            name
+                .chars()
+                .all(|c| char::is_ascii_alphanumeric(&c) || c == '-' || c == '_')
+        }
+    }
+}
