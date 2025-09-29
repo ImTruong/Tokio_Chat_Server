@@ -1,9 +1,12 @@
 use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen
 };
+use futures::StreamExt;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout},
+    style::Style,
+    widgets::{Block, Borders, List, ListItem},
     Terminal,
 };
 use std::io;
@@ -19,8 +22,18 @@ const SERVER_ADD: &str = "127.0.0.1:8080";
 // Khởi tạo textarea
 fn textarea_new() -> TextArea<'static> {
     let mut textarea = TextArea::default();
-    // TODO: Chỉnh sửa textarea
+    textarea.set_cursor_style(Style::default());
+    textarea.set_placeholder_text("Start typing...");
+    textarea.set_block(
+        Block::default().borders(Borders::ALL).title("Send message"),
+    );
     textarea
+}
+
+fn messages_to_list(msgs: &[String], min_lines: usize, max_length: usize) -> List<'_> {
+    let mut list_items: Vec<ListItem> = Vec::new();
+    // TODO: Chuyển mỗi msg thành một list item
+    List::new(list_items)
 }
 
 #[tokio::main]
@@ -75,7 +88,30 @@ async fn main() -> anyhow::Result<()> {
     let mut term_stream = crossterm::event::EventStream::new();
 
     loop {
-        //     TODO: Vẽ UI và xử lý gửi nhận tin nhắn
+        let draw_res = term.draw(|f| {
+            let chunks = layout.split(f.size());
+
+            let msgs_height = chunks[0].height - 2;
+            let msgs_width = chunks[0].width - 2;
+            let msgs_title = format!("Room - {current_room}");
+            let msgs = messages_to_list(
+                &messages,
+                msgs_height.into(),
+                msgs_width.into(),
+            ).block(Block::default().borders(Borders::ALL).title(msgs_title));
+
+            f.render_widget(msgs, chunks[0]);
+
+            f.render_widget(&textarea, chunks[1]);
+        });
+
+        match draw_res {
+            Ok(_) => (),
+            Err(_) => break
+        }
+
+        // TODO: Gửi, nhân tin nhắn từ server
+
         break;
     }
 
