@@ -262,9 +262,60 @@ async fn handle_user(
                     let _ = room_tx.send(RoomMsg::Msg(msg));
                 }
             },
-
+            peer_msg = room_rx.recv() => {
+                let peer_msg = match peer_msg {
+                    Ok(ok) => ok,
+                    // we would get this error if all tx
+                    // were dropped for this rx, which is not
+                    // possible since we're holding a tx,
+                    // but if this were to somehow ever happen
+                    // we just put the user back into the main
+                    // room
+                    Err(RecvError::Closed) => {
+                        let _ = room_tx.send(RoomMsg::Left(name.clone()));
+                        room_tx = rooms.change(&room_name, MAIN, &name);
+                        room_rx = room_tx.subscribe();
+                        room_name = MAIN.into();
+                        let _ = room_tx.send(RoomMsg::Joined(name.clone()));
+                        continue;
+                    },
+                    // under high load we might not deliver all msgs
+                    // to all users in a room, in which case we let
+                    // them know that we dropped some msgs
+                    Err(RecvError::Lagged(n)) => {
+                        tracing::warn!("Server dropped {n} messages for {room_name} with {} users", room_tx.receiver_count());
+                        b!(sink.send(format!("Server is very busy and dropped {n} messages, sorry!")).await);
+                        continue;
+                    }
+                };
+                match peer_msg {
+                    RoomMsg::Joined(peer_name) => {
+                        let msg = if name == peer_name {
+                            format!("You joined {room_name}")
+                        } else {
+                            format!("{peer_name} joined")
+                        };
+                        b!(sink.send(msg).await);
+                    },
+                    RoomMsg::Left(peer_name) => {
+                        let msg = if name == peer_name {
+                            format!("You left {room_name}")
+                        } else {
+                            format!("{peer_name} left")
+                        };
+                        b!(sink.send(msg).await);
+                    },
+                    RoomMsg::Msg(msg) => {
+                        b!(sink.send(msg).await);
+                    },
+                };
+            },
         }
-    }
+    };
+    let _ = room_tx.send(RoomMsg::Left(name.clone()));
+    rooms.leave(&room_name, &name);
+    names.remove(&name);
+    should_exit(exit_result);
 }
 
 const IGNORE_KINDS: [ErrorKind; 2] = [ErrorKind::BrokenPipe, ErrorKind::ConnectionReset];
